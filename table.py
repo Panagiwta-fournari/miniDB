@@ -3,6 +3,7 @@ from tabulate import tabulate
 import pickle
 import os
 from misc import get_op, split_condition
+from operator import itemgetter
 
 class Table:
     '''
@@ -171,7 +172,7 @@ class Table:
         return indexes_to_del
 
 
-    def _select_where(self, return_columns, condition=None, order_by=None, asc=False, top_k=None):
+    def _select_where(self, return_columns, condition=None, order_by=None, asc=False, top_k=None, group_by=None, select_distinct=None):
         '''
         Select and return a table containing specified columns and rows where condition is met
         '''
@@ -204,11 +205,15 @@ class Table:
         dict['column_types']   = [self.column_types[i] for i in return_cols]
         dict['_no_of_columns'] = len(return_cols)
 
+        result_table = Table(load=dict)
         # order by the return table if specified
-        if order_by is None:
-            return Table(load=dict)
-        else:
-            return Table(load=dict).order_by(order_by, asc)
+        if order_by is not None:
+            result_table = result_table.order_by(order_by, asc)
+        if group_by is not None:
+            result_table = result_table.group_by(group_by, asc)
+        if select_distinct is not None:
+            result_table = result_table.select_distinct(select_distinct)
+        return result_table
 
 
     def _select_where_with_btree(self, return_columns, bt, condition, order_by=None, asc=False, top_k=None):
@@ -262,16 +267,48 @@ class Table:
         else:
             return Table(load=dict).order_by(order_by, asc)
 
+        if group_by is None:
+            return Table(load=dict)
+        else:
+            return Table(load=dict).group_by(group_by, asc)
 
     def order_by(self, column_name, asc=False):
         '''
         Order by based on column
         '''
+        print('Got in Table.order_by')
         # get column, sort values and return sorted indexes
         column = self.columns[self.column_names.index(column_name)]
         idx = sorted(range(len(column)), key=lambda k: column[k], reverse=not asc)
         # return table but arange data using idx list (sorted indexes)
         dict = {(key):([self.data[i] for i in idx] if key=="data" else value) for key, value in self.__dict__.items()}
+        return Table(load=dict)
+
+    def group_by(self, column_name, asc=False):
+        print('ddd')
+        column = self.columns[self.column_names.index(column_name)]
+        
+        unique_values = {}
+        for idx, value in enumerate(column):
+            if value not in unique_values:
+                unique_values[value] = idx
+
+        #unique_values = sorted(range(len(column)), reverse=not asc)
+        #rows = []
+        #rows.sort(key=itemgetter(column_number))
+
+        dict = {(key):([self.data[i] for i in unique_values.values()] if key=="data" else value) for key, value in self.__dict__.items()}
+        return Table(load=dict)
+
+    def select_distinct(self, column_name):
+        column = self.columns[self.column_names.index(column_name)]
+        unique_values = {}
+        for idx, value in enumerate(column):
+            if value not in unique_values:
+                unique_values[value] = idx
+
+        dict = {(key):([self.data[i] for i in unique_values.values()] if key=="data" else value) for key, value in self.__dict__.items()}
+       # print(dict)
         return Table(load=dict)
 
 

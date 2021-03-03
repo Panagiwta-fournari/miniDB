@@ -290,7 +290,7 @@ class Database:
         self.save()
 
     def select(self, table_name, columns, condition=None, order_by=None, asc=False,\
-               top_k=None, save_as=None, return_object=False):
+               top_k=None, group_by=None, select_distinct=None, save_as=None, return_object=False):
         '''
         Selects and outputs a table's data where condtion is met.
 
@@ -319,7 +319,7 @@ class Database:
             bt = self._load_idx(index_name)
             table = self.tables[table_name]._select_where_with_btree(columns, bt, condition, order_by, asc, top_k)
         else:
-            table = self.tables[table_name]._select_where(columns, condition, order_by, asc, top_k)
+            table = self.tables[table_name]._select_where(columns, condition, order_by, asc, top_k, group_by, select_distinct)
         self.unlock_table(table_name)
         if save_as is not None:
             table._name = save_as
